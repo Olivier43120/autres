@@ -10,10 +10,10 @@
     textarea { width: 100%; height: 100%; font-family: monospace; font-size: 13px; padding: 10px; box-sizing: border-box; }
     iframe { width: 50%; height: 100%; border: 1px solid #ccc; background: #fff; }
     .btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
-    button, label.btn { padding: 10px 15px; color: white; border: none; font-size: 14px; cursor: pointer; border-radius: 4px; display: inline-block; }
+    button { padding: 10px 15px; color: white; border: none; font-size: 14px; cursor: pointer; border-radius: 4px; }
     #btnCompile { background: #28a745; }
     #btnImg { background: #6f42c1; }
-    form { display: none; }
+    #status { font-weight: bold; color: #333; margin-top: 5px; }
   </style>
 </head>
 <body>
@@ -26,6 +26,7 @@
         <button id="btnCompile" onclick="compileTeX()">Compiler le PDF (TeX Live)</button>
         <button id="btnImg" onclick="insertImageURL()">📷 Ajouter une image web</button>
       </div>
+      <div id="status">Prêt pour la compilation.</div>
       
       <textarea id="latexCode">\documentclass{article}
 \usepackage{graphicx}
@@ -46,32 +47,58 @@ La formule suivante est parfaitement vectorielle :
 
 \section{Inclusion d'images}
 \begin{center}
-  \includegraphics[width=0.4\textwidth]{https://raw.githubusercontent.com/Olivier43120/cours-images/main/fonction.png}
+  \includegraphics[width=0.4\textwidth]{https://upload.wikimedia.org/wikipedia/commons/thumb/9/92/LaTeX_logo.svg/320px-LaTeX_logo.svg.png}
 \end{center}
 
 \end{document}</textarea>
     </div>
 
-    <!-- Formulaire masqué pour soumettre en POST sans restriction de taille ni blocage CORS -->
-    <form id="latexForm" action="https://latexonline.cc/compile" method="POST" target="pdfPreview">
-      <input type="hidden" name="text" id="formText">
-    </form>
-
     <!-- Le vrai PDF vectoriel s'affiche ici -->
-    <iframe name="pdfPreview" id="pdfPreview"></iframe>
+    <iframe id="pdfPreview"></iframe>
   </div>
 
   <script>
-    function compileTeX() {
+    async function compileTeX() {
+      const btn = document.getElementById('btnCompile');
+      const status = document.getElementById('status');
       const code = document.getElementById('latexCode').value;
-      const formText = document.getElementById('formText');
-      const latexForm = document.getElementById('latexForm');
+      const iframe = document.getElementById('pdfPreview');
 
-      // Injecte le code LaTeX dans le champ du formulaire
-      formText.value = code;
+      btn.disabled = true;
+      status.innerText = "Compilation TeX Live en cours...";
+      status.style.color = "#007bff";
 
-      // Soumet le formulaire directement vers l'iframe en POST
-      latexForm.submit();
+      try {
+        // Contournement CORS + Envoi du code au compilateur TeX Live
+        const targetUrl = 'https://latexonline.cc/compile?text=' + encodeURIComponent(code);
+        const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(targetUrl);
+
+        const response = await fetch(proxyUrl);
+
+        if (response.ok) {
+          const pdfBlob = await response.blob();
+          
+          // Vérification que le fichier renvoyé est bien un PDF
+          if (pdfBlob.type.includes("pdf") || pdfBlob.size > 1000) {
+            const pdfUrl = URL.createObjectURL(pdfBlob);
+            iframe.src = pdfUrl;
+            status.innerText = "Compilation réussie !";
+            status.style.color = "green";
+          } else {
+            status.innerText = "Erreur de syntaxe dans le document LaTeX.";
+            status.style.color = "red";
+          }
+        } else {
+          status.innerText = "Erreur de compilation (" + response.status + ").";
+          status.style.color = "red";
+        }
+      } catch (err) {
+        console.error(err);
+        status.innerText = "Erreur réseau lors de la compilation.";
+        status.style.color = "red";
+      } finally {
+        btn.disabled = false;
+      }
     }
 
     function insertImageURL() {
@@ -83,7 +110,6 @@ La formule suivante est parfaitement vectorielle :
       textarea.value += snippet;
     }
 
-    // Compilation automatique au chargement
     window.onload = compileTeX;
   </script>
 
