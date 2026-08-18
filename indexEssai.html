@@ -18,8 +18,8 @@
     #status { font-weight: bold; color: #333; margin-top: 5px; }
   </style>
 
-  <!-- Moteur WebAssembly TeX autonome -->
-  <script src="https://unpkg.com/swiftlatex@1.1.0/swiftlatexpdftex.js"></script>
+  <!-- Moteur WebAssembly TeX via JsDelivr CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/swiftlatex@1.1.0/swiftlatexpdftex.js"></script>
 </head>
 <body>
 
@@ -28,7 +28,7 @@
   <div class="layout">
     <div class="editor-container">
       <div class="btn-group">
-        <button id="btnCompile" onclick="compileTeXLive()">Compiler le vrai PDF</button>
+        <button id="btnCompile" onclick="compileTeXLive()" disabled>Compiler le vrai PDF</button>
         <label for="imgUpload" class="btn" id="btnImg">📷 Charger une image locale</label>
         <input type="file" id="imgUpload" accept="image/png, image/jpeg" onchange="uploadImageToTeX(event)">
       </div>
@@ -73,8 +73,8 @@ Si vous ajoutez une image via le bouton ci-dessus, elle sera disponible sous le 
       try {
         pdfEngine = new PdfTeXEngine();
 
-        // Utilisation d'un CDN Unpkg explicite pour les binaires .wasm/.mem
-        pdfEngine.setBaseURL("https://unpkg.com/swiftlatex@1.1.0/");
+        // Utilisation du CDN JsDelivr pour charger les dépendances WASM
+        pdfEngine.setBaseURL("https://cdn.jsdelivr.net/npm/swiftlatex@1.1.0/");
         
         status.innerText = "Téléchargement du moteur WASM (~8 Mo)...";
         await pdfEngine.loadEngine();
@@ -84,7 +84,7 @@ Si vous ajoutez une image via le bouton ci-dessus, elle sera disponible sous le 
         btn.disabled = false;
       } catch (err) {
         console.error("Erreur de chargement WASM :", err);
-        status.innerText = "Erreur de chargement du moteur WASM.";
+        status.innerText = "Erreur de chargement du moteur WASM. Vérifiez la console (F12).";
         status.style.color = "red";
       }
     }
@@ -117,14 +117,17 @@ Si vous ajoutez une image via le bouton ci-dessus, elle sera disponible sous le 
           
           document.getElementById('pdfPreview').src = pdfUrl;
           status.innerText = "Compilation réussie !";
+          status.style.color = "green";
         } else {
           status.innerText = "Erreur de syntaxe LaTeX dans le document.";
+          status.style.color = "red";
           console.log(pdfEngine.getLatexLog());
         }
 
       } catch (err) {
         console.error(err);
         status.innerText = "Erreur lors de la compilation.";
+        status.style.color = "red";
       } finally {
         btn.disabled = false;
       }
