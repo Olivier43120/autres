@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Vrai Compilateur TeX Live WASM (PDF Natif)</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 20px; background: #f4f4f9; }
+    .layout { display: flex; gap: 20px; height: 80vh; }
+    .editor-container { width: 50%; display: flex; flex-direction: column; gap: 10px; }
+    textarea { width: 100%; height: 100%; font-family: monospace; font-size: 13px; padding: 10px; }
+    iframe { width: 50%; height: 100%; border: 1px solid #ccc; background: #fff; }
+    .btn-group { display: flex; gap: 10px; }
+    button, label.btn { padding: 10px 15px; color: white; border: none; font-size: 14px; cursor: pointer; border-radius: 4px; display: inline-block; }
+    #btnCompile { background: #28a745; }
+    #btnImg { background: #6f42c1; }
+    button:disabled { background: #6c757d; cursor: not-allowed; }
+    input[type="file"] { display: none; }
+  </style>
+
+  <!-- Moteur pdfTeX WebAssembly moderne -->
+  <script src="https://cdn.jsdelivr.net/npm/swiftlatex@1.1.0/swiftlatexpdftex.js"></script>
+</head>
+<body>
+
+  <h2>Vrai Compilateur TeX Live (100% Client - PDF Vectoriel Natif)</h2>
+  
+  <div class="layout">
+    <div class="editor-container">
+      <div class="btn-group">
+        <button id="btnCompile" onclick="compileTeXLive()">Compiler le vrai PDF</button>
+        <label for="imgUpload" class="btn" id="btnImg">📷 Charger une image locale</label>
+        <input type="file" id="imgUpload" accept="image/png, image/jpeg" onchange="uploadImageToTeX(event)">
+      </div>
+      <textarea id="latexCode">\documentclass{article}
+\usepackage{graphicx}
+\usepackage{amsmath}
+
+\begin{document}
+
+\title{Document PDF Natif via TeX Live WASM}
+\author{Auteur}
+\date{\today}
+\maketitle
+
+Ceci est compil\'e par le moteur \textbf{pdfTeX} fonctionnant directement dans le navigateur.
+
+\section{Formules Math\'ematiques}
+Formule vectorielle pure :
+\[ \int_0^\infty e^{-x^2} dx = \frac{\sqrt{\pi}}{2} \]
+
+\section{Inclusion d'images}
+Si vous ajoutez une image via le bouton ci-dessus, elle sera enregistr\'ee dans le syst\`eme de fichiers virtuel de TeX Live sous le nom \texttt{image.png}.
+
+% Décommentez après avoir chargé une image :
+% \begin{center}
+%   \includegraphics[width=0.5\textwidth]{image.png}
+% \end{center}
+
+\end{document}</textarea>
+    </div>
+
+    <!-- Le vrai PDF vectoriel s'affiche ici -->
+    <iframe id="pdfPreview"></iframe>
+  </div>
+
+  <script>
+    let pdfEngine = null;
+    let loadedImages = {};
+
+    // Initialisation du moteur WASM
+    async function initEngine() {
+      const btn = document.getElementById('btnCompile');
+      btn.disabled = true;
+      btn.innerText = "Chargement du moteur TeX Live (~8Mo)...";
+
+      try {
+        pdfEngine = new PdfTeXEngine();
+        await pdfEngine.loadEngine();
+        btn.disabled = false;
+        btn.innerText = "Compiler le vrai PDF";
+      } catch (err) {
+        console.error(err);
+        btn.innerText = "Erreur WASM (Serveur local requis)";
+        alert("Attention : Pour exécuter WebAssembly localement, vous devez ouvrir cette page via un serveur HTTP local (ex: extension Live Server sur VS Code ou 'python -m http.server').");
+      }
+    }
+
+    async function compileTeXLive() {
+      if (!pdfEngine) return;
+
+      const btn = document.getElementById('btnCompile');
+      const code = document.getElementById('latexCode').value;
+
+      btn.disabled = true;
+      btn.innerText = "Compilation pdfTeX en cours...";
+
+      try {
+        // 1. Écriture des images chargées dans le système de fichiers mémoire de TeX Live
+        for (const [filename, dataBuffer] of Object.entries(loadedImages)) {
+          pdfEngine.writeMemFSFile(filename, dataBuffer);
+        }
+
+        // 2. Écriture du fichier main.tex
+        pdfEngine.writeMemFSFile("main.tex", code);
+        pdfEngine.setEngineMainFile("main.tex");
+
+        // 3. Exécution réelle de pdfTeX
+        const status = await pdfEngine.processPDF();
+
+        if (status === 0) {
+          // 4. Extraction du PDF binaire généré par TeX Live
+          const pdfData = pdfEngine.readMemFSFile("main.pdf");
+          
+          // Création d'une URL Blob pour le vrai PDF
+          const blob = new Blob([pdfData], { type: 'application/pdf' });
+          const pdfUrl = URL.createObjectURL(blob);
+          
+          document.getElementById('pdfPreview').src = pdfUrl;
+        } else {
+          alert("Erreur de compilation LaTeX. Regardez la console F12 pour les détails.");
+          console.log(pdfEngine.getLatexLog());
+        }
+
+      } catch (err) {
+        console.error(err);
+        alert("Erreur lors de la compilation : " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "Compiler le vrai PDF";
+      }
+    }
+
+    // Gestion de l'ajout d'images réelles dans le système de fichiers virtuel de TeX
+    function uploadImageToTeX(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        // Stocke les octets de l'image
+        loadedImages["image.png"] = new Uint8Array(e.target.result);
+        
+        // Ajoute l'instruction d'image dans l'éditeur si elle n'y est pas
+        const textarea = document.getElementById('latexCode');
+        if (!textarea.value.includes('image.png')) {
+          textarea.value += `\n\\begin{center}\n  \\includegraphics[width=0.5\\textwidth]{image.png}\n\\end{center}\n`;
+        }
+        
+        alert("Image 'image.png' enregistrée dans le système TeX Live. Cliquez sur 'Compiler' !");
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    window.onload = initEngine;
+  </script>
+
+</body>
+</html>
