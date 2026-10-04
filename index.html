@@ -2,10 +2,29 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="refresh" content="0; url=lab/index.html?path=project/BDDmondial.ipynb">
-    <title>JupyterLite</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TP SQLite & Pandas</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+        }
+        iframe {
+            width: 100%;
+            height: 100vh;
+            border: none;
+        }
+    </style>
 </head>
 <body>
-    <p>Redirection vers le notebook...</p>
+
+    <!-- On pointe vers l'interface Notebook de Basthon en lui passant l'URL de ton fichier .ipynb -->
+    <iframe 
+        src="https://notebook.basthon.fr/?from=tp_sqlite.ipynb" 
+        title="Notebook SQLite">
+    </iframe>
+
 </body>
 </html>
