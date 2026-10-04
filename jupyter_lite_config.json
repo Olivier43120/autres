@@ -1,0 +1,8 @@
+{
+  "LiteBuildConfig": {
+    "extensions": [
+      "@jupyterlite/javascript-kernel",
+      "jupyterlite-sqlite-kernel"
+    ]
+  }
+}
