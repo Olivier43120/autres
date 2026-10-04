@@ -1,8 +1,5 @@
 {
   "LiteBuildConfig": {
-    "extensions": [
-      "@jupyterlite/javascript-kernel",
-      "jupyterlite-sqlite-kernel"
-    ]
+    "no_use_default_contents": false
   }
 }
