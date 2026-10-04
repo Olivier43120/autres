@@ -1,5 +1,5 @@
 {
   "LiteBuildConfig": {
-    "no_use_default_contents": false
+    "ignore_sys_prefix": true
   }
 }
